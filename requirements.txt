@@ -6,3 +6,4 @@ Pillow
 #pkg-resources
 pytz==2019.1
 sqlparse==0.3.0
+django-debug-permissions
