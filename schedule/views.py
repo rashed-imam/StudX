@@ -28,26 +28,30 @@ from schedule.forms import SlotForm
 # *** Code start here ***
 
 @login_required
-def schedule_main(request):
+def schedule_main(request, param=None):
 	
 	# Init objects
 	classes = Classes.objects.all()
 	schedule = Schedule.objects.none()
+	classes_filter = None
 	
 	# Filters
 	classes_filter = request.POST.get('classe')
 	
+	if param:
+		classes_filter = classes.values_list('id', flat=True).get(classe_name=param)
+		
+	
 	schedule_dict = dict()
 	if classes_filter:
 		schedule = Schedule.objects.filter(student__classe=classes_filter).distinct().prefetch_related('teacher')
-		
-		print(schedule)
-	
+
 		if schedule :
 			for day in DAYS_OF_THE_WEEK:
 				schedule_dict[day[1]] = schedule.filter(weekDay=day[0])
 
 	variables = {
+		'scheduleOf': param,
 		'TimeList':TimeList, # init from /StudX_dir/StudX/common/utils.py
 		'days':DAYS_OF_THE_WEEK[0:5],
 		'schedule':schedule_dict,
@@ -65,15 +69,18 @@ def create_edit_slot(request, id=None):
 		return HttpResponseForbidden()
 
 	user = request.user
-
+	studentChecked = None
+	
 	if id:
 		slot = get_object_or_404(Schedule, id=id)
-		if discipline.creator != request.user:
+		if slot.creator != request.user:
 			return HttpResponseForbidden()
+		studentChecked = slot.student.all().values_list('matricule', flat=True)
 	else:
 		slot = Schedule(creator=user)
 	
 	classes = Classes.objects.all()
+	
 	
 	if request.method == 'POST':
 		form = SlotForm(request.POST, instance=slot)
@@ -101,6 +108,7 @@ def create_edit_slot(request, id=None):
 		form = SlotForm(instance=slot)
 	
 	variables = {
+		'studentChecked': studentChecked,
 		'classes': classes,
 		'form': form,
 	}
